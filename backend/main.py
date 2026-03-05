@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import git
 import aiofiles
@@ -33,6 +34,9 @@ PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Session storage
 sessions: Dict[str, dict] = {}
+
+# Ruta al frontend compilado (ahora apunta a frontend/dist)
+dist_path = os.path.join(os.getcwd(), "frontend", "dist")
 
 # Pydantic models
 class CloneRequest(BaseModel):
@@ -441,11 +445,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Montar la carpeta de assets del frontend compilado
+app.mount("/assets", StaticFiles(directory=f"{dist_path}/assets"), name="assets")
+
 # API Endpoints
 
-@app.get("/")
-async def root():
-    return {"message": "OpenAgent Runtime API", "version": "1.0.0"}
+@app.get("/", include_in_schema=False)
+async def serve_frontend():
+    """Sirve el frontend compilado (SPA)."""
+    return FileResponse(f"{dist_path}/index.html")
 
 @app.get("/health")
 async def health_check():
